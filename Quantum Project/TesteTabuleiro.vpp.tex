@@ -1,0 +1,29 @@
+{\small\sf class} $TesteTabuleiro$
+\par
+\kInstanceVarDef
+\parlinebr
+\begin{insvar}\kw{public}
+\assdef{tab}{Tabuleiro}
+\end{insvar}
+\par
+\kOperations
+\kw{\kw{public}}\begin{op}[e]{Teste1}%
+\signature{() \Oto ()}
+\parms{}
+\annlab[o]{TesteTabuleiro`Teste1}
+\begin{blockstmt}
+\ass{tab}{\fnapply{\new{Tabuleiro}}{}} ; \\
+$tab$.\call{teste}{}
+\end{blockstmt};
+\end{op}
+\kw{\kw{public}}\begin{op}[e]{Teste2}%
+\signature{() \Oto Tabuleiro`Estado}
+\parms{}
+\annlab[o]{TesteTabuleiro`Teste2}
+\begin{blockstmt}
+\ass{tab}{\fnapply{\new{Tabuleiro}}{}} ; \\
+\return{\fnapply{tab.teste-FimJogo}{}}
+\end{blockstmt}
+\end{op}
+{\small\sf end} {\it TesteTabuleiro}
+

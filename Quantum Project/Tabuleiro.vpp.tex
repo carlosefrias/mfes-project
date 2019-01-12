@@ -1,0 +1,312 @@
+{\small\sf class} $Tabuleiro$
+\par
+\kValues
+\kw{\kw{private}}\val{num-col}[\Char  \Gmap \Natone ]{\map{\Quote a \Quote  \Mapsto 1,\Quote b \Quote  \Mapsto 2,\Quote c \Quote  \Mapsto 3,\Quote d \Quote  \Mapsto 4,\Quote e \Quote  \Mapsto 5,\Quote f \Quote  \Mapsto 6,\Quote g \Quote  \Mapsto 7,\Quote h \Quote  \Mapsto 8}}
+\kTypes
+\kw{public}\begin{record}{Casa}linha :{\Natone } \\
+coluna :{\Char } \\
+\end{record}
+\begin{invfn}{casa}casa.linha \In  \Rng num-col \And casa.coluna \In  \Dom num-col;
+\end{invfn}
+\type{\kw{public}\kw{ }TipoPeca}{\const{circle} | \const{square} | \const{queen};}
+\kw{public}\begin{record}{Peca}tipo :{TipoPeca} \\
+jogador :{\Natone } \\
+num-elem :{\Natone } \\
+\end{record}
+\begin{invfn}{jog}jog.jogador \In \set{1,2};
+\end{invfn}
+\type{\kw{public}\kw{ }PecasNasCasas}{Casa \Gmap Peca;}
+\type{\kw{public}\kw{ }Estado}{\const{inicial} | \const{vez\_jog1} | \const{vez\_jog2} | \const{fim};}
+\type{\kw{public}\kw{ }Direcao}{\const{horizontal} | \const{vertical} | \const{diagonal1} | \const{diagonal2} | \const{sem\_ligacao}}
+\kInstanceVarDef
+\parlinebr
+\begin{insvar}\kw{public}
+\assdef{pecasNasCasas}{PecasNasCasas}[{\Emptymap }]
+\end{insvar}
+\begin{insvar}\kw{public}
+\assdef{tabEstado}{Estado}[{\const{inicial}}]
+\end{insvar}
+\begin{insvar}\kw{private}
+\assdef{mapa-direcoes}{TipoPeca \Gmap \setof{Direcao}}[{\map{\const{circle} \Mapsto \set{\const{diagonal1},\const{diagonal2}}, \\
+\const{square} \Mapsto \set{\const{horizontal},\const{vertical}}, \\
+\const{queen} \Mapsto \set{\const{horizontal},\const{vertical},\const{diagonal1},\const{diagonal2}}}}]
+\end{insvar}
+\begin{insvar}\kw{private}
+\assdef{map-jog}{Estado \Gmap \Natone }[{\map{\const{vez\_jog1} \Mapsto 1,\const{vez\_jog2} \Mapsto 2}}]
+\end{insvar}
+\par
+\kOperations
+\kw{\kw{public}}\begin{op}[e]{Tabuleiro}%
+\signature{() \Oto Tabuleiro}
+\parms{}
+\annlab[o]{Tabuleiro`Tabuleiro}
+\begin{blockstmt}
+\ass{pecasNasCasas}{\mapcomp{\reccons{\kw{mk-} Casa}{\pex{jog \Minus 1} \X 7 + 1,coluna} \Mapsto \reccons{\kw{mk-} Peca}{\const{circle},jog,1}}{coluna \In \set{\Quote a \Quote ,\Quote c \Quote ,\Quote f \Quote ,\Quote h \Quote },jog \In \set{1,2}} \Mapmerge  \\
+\mapcomp{\reccons{\kw{mk-} Casa}{\pex{jog \Minus 1} \X 5 + 2,coluna} \Mapsto \reccons{\kw{mk-} Peca}{\const{circle},jog,1}}{coluna \In \set{\Quote b \Quote ,\Quote g \Quote },jog \In \set{1,2}} \Mapmerge  \\
+\mapcomp{\reccons{\kw{mk-} Casa}{\pex{jog \Minus 1} \X 7 + 1,coluna} \Mapsto \reccons{\kw{mk-} Peca}{\const{square},jog,1}}{coluna \In \set{\Quote b \Quote ,\Quote d \Quote ,\Quote e \Quote ,\Quote g \Quote },jog \In \set{1,2}} \Mapmerge  \\
+\mapcomp{\reccons{\kw{mk-} Casa}{\pex{jog \Minus 1} \X 5 + 2,coluna} \Mapsto \reccons{\kw{mk-} Peca}{\const{square},jog,1}}{coluna \In \set{\Quote c \Quote ,\Quote f \Quote },jog \In \set{1,2}} \Mapmerge  \\
+\mapcomp{\reccons{\kw{mk-} Casa}{\pex{jog \Minus 1} \X 5 + 2,coluna} \Mapsto \reccons{\kw{mk-} Peca}{\const{queen},jog,1}}{coluna \In \set{\Quote a \Quote ,\Quote d \Quote ,\Quote e \Quote ,\Quote h \Quote },jog \In \set{1,2}}} ; \\
+\ass{tabEstado}{\const{vez\_jog1}}
+\end{blockstmt};
+\end{op}
+\kw{\kw{public}}\begin{op}[e]{fim-jogo}%
+\signature{() \Oto \Bool }
+\parms{}
+\annlab[o]{Tabuleiro`fim-jogo}
+\return{\pex{ \Card \pex{ \Dom \pex{pecasNasCasas \Rto \setcomp{\reccons{\kw{mk-} Peca}{tipo,1,n}}{tipo \In \set{\const{circle},\const{square},\const{queen}},n \In \setrange{6}{10}}}} \Ge 3} \Or  \\
+\pex{ \Card \pex{ \Dom \pex{pecasNasCasas \Rto \setcomp{\reccons{\kw{mk-} Peca}{tipo,2,n}}{tipo \In \set{\const{circle},\const{square},\const{queen}},n \In \setrange{6}{10}}}} \Ge 3}};
+\end{op}
+\kw{\kw{public}}\begin{op}[e]{jogada}%
+\signature{Casa \X Casa \Oto ()}
+\parms{casa1,casa2}
+\annlab[o]{Tabuleiro`jogada}
+\begin{blockstmt}
+\If casa2 \In  \Dom pecasNasCasas
+\Then \\
+\call{come}{casa1,casa2}
+\Else \\
+\call{move-para}{casa1,casa2}
+\Fi
+\end{blockstmt}
+\begin{precond}
+\fnapply{pode-mover}{casa1,casa2}
+\end{precond};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{move-para}%
+\signature{Casa \X Casa \Oto ()}
+\parms{casa1,casa2}
+\annlab[o]{Tabuleiro`move-para}
+\begin{blockstmt}
+\If casa2 \Notin  \Dom pecasNasCasas
+\Then \\
+\ass{pecasNasCasas}{\set{casa1} \Dby pecasNasCasas \Override \map{casa2 \Mapsto \fnapply{getPeca}{casa1}}}
+\Fi ; \\
+\call{muda-jogador}{}
+\end{blockstmt}
+\begin{precond}
+\fnapply{pode-mover}{casa1,casa2}
+\end{precond};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{come}%
+\signature{Casa \X Casa \Oto ()}
+\parms{casa1,casa2}
+\annlab[o]{Tabuleiro`come}
+\begin{blockstmt}
+\ass{pecasNasCasas}{\set{casa1} \Dby pecasNasCasas \Override  \\
+\map{casa2 \Mapsto \reccons{\kw{mk-} Peca}{\fnapply{getPeca}{casa1}.tipo,\fnapply{getPeca}{casa1}.jogador,\fnapply{getPeca}{casa1}.num-elem + \fnapply{getPeca}{casa2}.num-elem}}} ; \\
+\call{muda-jogador}{}
+\end{blockstmt}
+\begin{precond}
+\fnapply{pode-comer}{casa1,casa2}
+\end{precond};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{pode-mover}%
+\signature{Casa \X Casa \Oto \Bool }
+\parms{casa1,casa2}
+\annlab[o]{Tabuleiro`pode-mover}
+\begin{blockstmt}
+\return{\fnapply{distancia}{casa1,casa2} \Le \fnapply{getPeca}{casa1}.num-elem \And  \\
+\fnapply{getPeca}{casa1}.num-elem < 6 \And  \\
+\fnapply{qual-direcao}{casa1,casa2} \In \fnapply{mapa-direcoes}{\fnapply{getPeca}{casa1}.tipo} \And  \\
+ \Not \fnapply{existe-pecas}{casa1,casa2} \And  \\
+\fnapply{map-jog}{tabEstado} = \fnapply{getPeca}{casa1}.jogador}
+\end{blockstmt}
+\begin{precond}
+casa1 \In  \Dom pecasNasCasas
+\end{precond};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{pode-comer}%
+\signature{Casa \X Casa \Oto \Bool }
+\parms{casa1,casa2}
+\annlab[o]{Tabuleiro`pode-comer}
+\begin{blockstmt}
+\return{casa2 \In  \Dom pecasNasCasas \And  \\
+\fnapply{pode-mover}{casa1,casa2} \And  \\
+\fnapply{map-jog}{tabEstado} \Neq \fnapply{getPeca}{casa2}.jogador \And  \\
+\fnapply{getPeca}{casa2}.num-elem < 6}
+\end{blockstmt};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{distancia}%
+\signature{Casa \X Casa \Oto \Nat }
+\parms{casa1,casa2}
+\annlab[o]{Tabuleiro`distancia}
+\begin{blockstmt}
+\If casa1.linha = casa2.linha
+\Then \\
+\return{ \Abs \pex{\fnapply{num-col}{casa1.coluna} \Minus \fnapply{num-col}{casa2.coluna}}}
+\Elseif casa1.coluna = casa2.coluna
+\Then \\
+\return{ \Abs \pex{casa1.linha \Minus casa2.linha}}
+\Elseif  \Abs \pex{casa1.linha \Minus casa2.linha} =  \Abs \pex{\fnapply{num-col}{casa1.coluna} \Minus \fnapply{num-col}{casa2.coluna}}
+\Then \\
+\return{ \Abs \pex{casa1.linha \Minus casa2.linha}}
+\Else \\
+\return{100}
+\Fi
+\end{blockstmt};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{qual-direcao}%
+\signature{Casa \X Casa \Oto Direcao}
+\parms{casa1,casa2}
+\annlab[o]{Tabuleiro`qual-direcao}
+\begin{blockstmt}
+\If casa1.linha = casa2.linha
+\Then \\
+\return{\const{horizontal}}
+\Elseif casa1.coluna = casa2.coluna
+\Then \\
+\return{\const{vertical}}
+\Elseif casa1.linha \Minus casa2.linha = \fnapply{num-col}{casa1.coluna} \Minus \fnapply{num-col}{casa2.coluna}
+\Then \\
+\return{\const{diagonal1}}
+\Elseif casa1.linha \Minus casa2.linha =  \Uminus \pex{\fnapply{num-col}{casa1.coluna} \Minus \fnapply{num-col}{casa2.coluna}}
+\Then \\
+\return{\const{diagonal2}}
+\Else \\
+\return{\const{sem\_ligacao}}
+\Fi
+\end{blockstmt};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{existe-pecas}%
+\signature{Casa \X Casa \Oto \Bool }
+\parms{casa1,casa2}
+\annlab[o]{Tabuleiro`existe-pecas}
+\begin{blockstmt}
+\If \fnapply{casas-entre}{casa1,casa2} \Inter  \Dom pecasNasCasas = \set{}
+\Then \\
+\return{\False }
+\Else \\
+\return{\True }
+\Fi
+\end{blockstmt};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{casas-entre}%
+\signature{Casa \X Casa \Oto \setof{Casa}}
+\parms{casa1,casa2}
+\annlab[o]{Tabuleiro`casas-entre}
+\begin{blockstmt}
+\If \fnapply{qual-direcao}{casa1,casa2} = \const{vertical}
+\Then \\
+\return{\setcomp{\reccons{\kw{mk-} Casa}{i,casa1.coluna}}{i \In \setrange{\fnapply{min}{casa1.linha,casa2.linha} + 1}{\fnapply{max}{casa1.linha,casa2.linha} \Minus 1}}}
+\Elseif \fnapply{qual-direcao}{casa1,casa2} = \const{horizontal}
+\Then \\
+\return{\setcomp{\reccons{\kw{mk-} Casa}{casa1.linha,\fnapply{\pex{\mapinv{num-col}}}{i}}}{i \In \setrange{\fnapply{min}{\fnapply{num-col}{casa1.coluna},\fnapply{num-col}{casa2.coluna}} + 1} \\
+{\fnapply{max}{\fnapply{num-col}{casa1.coluna},\fnapply{num-col}{casa2.coluna}} \Minus 1}}}
+\Elseif \fnapply{qual-direcao}{casa1,casa2} = \const{diagonal1}
+\Then \\
+\return{\setcomp{\reccons{\kw{mk-} Casa}{\fnapply{maiorCasa}{casa1,casa2}.linha \Minus i,\fnapply{\pex{\mapinv{num-col}}}{\fnapply{num-col}{\fnapply{maiorCasa}{casa1,casa2}.coluna} + i}}} \\
+{i \In \setrange{1}{\fnapply{max}{casa1.linha,casa2.linha} \Minus \fnapply{min}{casa1.linha,casa2.linha} \Minus 1}}}
+\Elseif \fnapply{qual-direcao}{casa1,casa2} = \const{diagonal2}
+\Then \\
+\return{\setcomp{\reccons{\kw{mk-} Casa}{\fnapply{maiorCasa}{casa1,casa2}.linha \Minus i,\fnapply{\pex{\mapinv{num-col}}}{\fnapply{num-col}{\fnapply{maiorCasa}{casa1,casa2}.coluna} + i}}} \\
+{i \In \setrange{1}{\fnapply{max}{casa1.linha,casa2.linha} \Minus \fnapply{min}{casa1.linha,casa2.linha} \Minus 1}}}
+\Else \\
+\return{\set{}}
+\Fi
+\end{blockstmt};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{maiorCasa}%
+\signature{Casa \X Casa \Oto Casa}
+\parms{casa1,casa2}
+\annlab[o]{Tabuleiro`maiorCasa}
+\begin{blockstmt}
+\If casa1.linha > casa2.linha
+\Then \\
+\return{casa1}
+\Else \\
+\return{casa2}
+\Fi
+\end{blockstmt};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{muda-jogador}%
+\signature{() \Oto ()}
+\parms{}
+\annlab[o]{Tabuleiro`muda-jogador}
+\begin{blockstmt}
+\If  \Not \fnapply{fim-jogo}{}
+\Then \\
+\begin{blockstmt}
+\If tabEstado = \const{vez\_jog1}
+\Then \\
+\ass{tabEstado}{\const{vez\_jog2}}
+\Else \\
+\ass{tabEstado}{\const{vez\_jog1}}
+\Fi
+\end{blockstmt}
+\Else \\
+\ass{tabEstado}{\const{fim}}
+\Fi
+\end{blockstmt};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{min}%
+\signature{\Nat  \X \Nat  \Oto \Nat }
+\parms{n1,n2}
+\annlab[o]{Tabuleiro`min}
+\begin{blockstmt}
+\If n1 > n2
+\Then \\
+\return{n2}
+\Else \\
+\return{n1}
+\Fi
+\end{blockstmt};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{max}%
+\signature{\Nat  \X \Nat  \Oto \Nat }
+\parms{n1,n2}
+\annlab[o]{Tabuleiro`max}
+\begin{blockstmt}
+\If n1 > n2
+\Then \\
+\return{n1}
+\Else \\
+\return{n2}
+\Fi
+\end{blockstmt};
+\end{op}
+\kw{\kw{private}}\begin{op}[e]{getPeca}%
+\signature{Casa \Oto Peca}
+\parms{casa}
+\annlab[o]{Tabuleiro`getPeca}
+\return{\fnapply{pecasNasCasas}{casa}}
+\begin{precond}
+casa \In  \Dom pecasNasCasas
+\end{precond};
+\end{op}
+\kw{\kw{public}}\begin{op}[e]{teste}%
+\signature{() \Oto ()}
+\parms{}
+\annlab[o]{Tabuleiro`teste}
+\begin{blockstmt}
+\call{jogada}{\reccons{\kw{mk-} Casa}{2,\Quote a \Quote },\reccons{\kw{mk-} Casa}{3,\Quote b \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{7,\Quote b \Quote },\reccons{\kw{mk-} Casa}{6,\Quote c \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{2,\Quote c \Quote },\reccons{\kw{mk-} Casa}{3,\Quote c \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{6,\Quote c \Quote },\reccons{\kw{mk-} Casa}{5,\Quote b \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{3,\Quote b \Quote },\reccons{\kw{mk-} Casa}{4,\Quote b \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{7,\Quote f \Quote },\reccons{\kw{mk-} Casa}{6,\Quote f \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{4,\Quote b \Quote },\reccons{\kw{mk-} Casa}{5,\Quote b \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{7,\Quote h \Quote },\reccons{\kw{mk-} Casa}{6,\Quote h \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{3,\Quote c \Quote },\reccons{\kw{mk-} Casa}{4,\Quote c \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{6,\Quote f \Quote },\reccons{\kw{mk-} Casa}{6,\Quote e \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{4,\Quote c \Quote },\reccons{\kw{mk-} Casa}{5,\Quote c \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{6,\Quote e \Quote },\reccons{\kw{mk-} Casa}{5,\Quote e \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{5,\Quote c \Quote },\reccons{\kw{mk-} Casa}{5,\Quote d \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{5,\Quote e \Quote },\reccons{\kw{mk-} Casa}{5,\Quote d \Quote }} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{5,\Quote b \Quote },\reccons{\kw{mk-} Casa}{5,\Quote d \Quote }}
+\end{blockstmt};
+\end{op}
+\kw{\kw{public}}\begin{op}[e]{teste-FimJogo}%
+\signature{() \Oto Estado}
+\parms{}
+\annlab[o]{Tabuleiro`teste-FimJogo}
+\begin{blockstmt}
+\ass{pecasNasCasas}{\map{\reccons{\kw{mk-} Casa}{1,\Quote a \Quote } \Mapsto \reccons{\kw{mk-} Peca}{\const{queen},1,6}, \\
+\reccons{\kw{mk-} Casa}{1,\Quote b \Quote } \Mapsto \reccons{\kw{mk-} Peca}{\const{queen},1,6}, \\
+\reccons{\kw{mk-} Casa}{1,\Quote c \Quote } \Mapsto \reccons{\kw{mk-} Peca}{\const{queen},1,5}, \\
+\reccons{\kw{mk-} Casa}{6,\Quote c \Quote } \Mapsto \reccons{\kw{mk-} Peca}{\const{queen},2,5}}} ; \\
+\call{jogada}{\reccons{\kw{mk-} Casa}{1,\Quote c \Quote },\reccons{\kw{mk-} Casa}{6,\Quote c \Quote }} ; \\
+\return{tabEstado}
+\end{blockstmt}
+\end{op}
+{\small\sf end} {\it Tabuleiro}
+

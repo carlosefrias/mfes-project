@@ -1,0 +1,234 @@
+-----------------------------------------------------------------------------------------------------------------------
+--			Projecto Quantum - Métodos Formais de Engenharia de Software
+--					Carlos Eduardo Mesquita Frias - ei04116
+-----------------------------------------------------------------------------------------------------------------------
+class Tabuleiro
+
+values
+	--mapeamento para o número da coluna
+	private num_col: map char to nat1 = {'a'|->1, 'b'|->2, 'c'|->3, 'd'|->4, 'e'|->5, 'f'|->6, 'g'|->7, 'h'|->8};
+
+types
+	public Casa ::
+			linha: nat1
+			coluna: char
+	inv casa == casa.linha in set rng num_col and casa.coluna in set dom num_col;
+			
+	public TipoPeca = <circle> | <square> | <queen>;
+		
+	public Peca:: 
+			tipo: TipoPeca
+			jogador: nat1
+			num_elem: nat1
+	
+	inv jog == jog.jogador in set {1,2};
+
+	--cada casa pode ter 0 ou 1a peça
+	public PecasNasCasas = map Casa to Peca;
+	public Estado = <inicial> | <vez_jog1> | <vez_jog2> | <fim>;
+	public Direcao = <horizontal> | <vertical> | <diagonal1> | <diagonal2> | <sem_ligacao>;
+
+instance variables
+	public pecasNasCasas: PecasNasCasas := {|->};
+	public tabEstado: Estado := <inicial>;
+	private mapa_direcoes: map TipoPeca to set of Direcao := {<circle> |-> {<diagonal1>, <diagonal2>}, 
+															<square> |-> {<horizontal>, <vertical>}, 
+															<queen> |->{<horizontal>, <vertical>, <diagonal1>, <diagonal2>}};
+	private map_jog: map Estado to nat1 := {<vez_jog1> |-> 1, <vez_jog2> |-> 2};
+	
+operations
+	--construtor – para inicializar o tabuleiro
+	public Tabuleiro: () ==> Tabuleiro
+	Tabuleiro() ==
+	(		
+		--mapear as peças para as casas.
+		pecasNasCasas := 
+		{mk_Casa((jog-1)*7 + 1, coluna)|-> mk_Peca(<circle>, jog, 1) | coluna in set{'a','c','f','h'}, jog in set {1,2}} 
+		munion
+		{mk_Casa((jog-1)*5 + 2, coluna)|-> mk_Peca(<circle>, jog, 1) | coluna in set{'b','g'}, jog in set {1,2}}
+		munion
+		{mk_Casa((jog-1)*7 + 1, coluna)|-> mk_Peca(<square>, jog, 1) | coluna in set{'b','d','e','g'}, jog in set {1,2}}
+		munion
+		{mk_Casa((jog-1)*5 + 2, coluna)|-> mk_Peca(<square>, jog, 1) | coluna in set{'c','f'}, jog in set {1,2}}
+		munion
+		{mk_Casa((jog-1)*5 + 2, coluna)|-> mk_Peca(<queen>, jog, 1) | coluna in set{'a','d','e','h'}, jog in set {1,2}};
+		
+		tabEstado := <vez_jog1>;
+	);
+	--operação que verifica o fim do jogo
+	public fim_jogo: ()==> bool
+	fim_jogo() ==		
+		return (card (dom (pecasNasCasas :> {mk_Peca(tipo,1, n)| tipo in set {<circle> , <square> , <queen>}, n in set {6,...,10}})) >= 3)
+		or
+		(card (dom (pecasNasCasas :> {mk_Peca(tipo, 2, n)| tipo in set {<circle> , <square> , <queen>}, n in set {6,...,10}})) >= 3);
+	
+	public jogada: Casa * Casa ==> ()
+	jogada(casa1, casa2) ==
+	(
+		if casa2 in set dom pecasNasCasas then come(casa1, casa2)
+		else move_para(casa1, casa2);
+	)
+	pre pode_mover(casa1, casa2);
+	
+	--operação para mover a peça P para a casa C
+	private move_para: Casa * Casa ==> ()
+	move_para(casa1, casa2) ==
+	(
+		if casa2 not in set dom pecasNasCasas then pecasNasCasas := {casa1} <-: pecasNasCasas ++ {casa2 |-> getPeca(casa1)};
+		muda_jogador();
+	)
+	pre pode_mover(casa1, casa2);
+	
+	--operação para comer a peça de um adversário
+	private come: Casa * Casa ==> ()
+	come(casa1, casa2) ==
+	(
+		pecasNasCasas := {casa1} <-: pecasNasCasas ++ 
+							{casa2|-> mk_Peca(getPeca(casa1).tipo, getPeca(casa1).jogador, getPeca(casa1).num_elem + getPeca(casa2).num_elem)};
+		muda_jogador();
+	)
+	pre pode_comer(casa1, casa2);
+	
+	--operação para verificar se a peça pode mover de casa1 para casa2
+	private pode_mover: Casa * Casa ==> bool
+	pode_mover(casa1, casa2) ==
+	(
+		return  
+			distancia(casa1, casa2) <= getPeca(casa1).num_elem 
+			and getPeca(casa1).num_elem <6
+			and qual_direcao(casa1, casa2) in set mapa_direcoes(getPeca(casa1).tipo)
+			and not existe_pecas(casa1, casa2) and
+			map_jog(tabEstado) = getPeca(casa1).jogador;
+	)
+	pre casa1 in set dom pecasNasCasas;
+	private pode_comer: Casa * Casa ==> bool
+	pode_comer(casa1, casa2) ==
+	(
+		return
+			casa2 in set dom pecasNasCasas and 
+			pode_mover(casa1, casa2) and
+			map_jog(tabEstado) <> getPeca(casa2).jogador and
+			getPeca(casa2).num_elem < 6;		
+	);
+	
+	--operação para calcular a distância entre duas casas
+	private distancia: Casa * Casa ==> nat
+	distancia(casa1, casa2)== 
+	(
+		if casa1.linha = casa2.linha then return abs(num_col(casa1.coluna) - num_col(casa2.coluna))
+		elseif casa1.coluna = casa2.coluna then return abs(casa1.linha - casa2.linha)
+		elseif abs(casa1.linha - casa2.linha) = abs(num_col(casa1.coluna) - num_col(casa2.coluna)) then return abs(casa1.linha - casa2.linha)
+		else return 100;--apenas por agora...
+	);
+	
+	--operação para determinar qual a direcao no movimento
+	private qual_direcao: Casa * Casa ==> Direcao
+	qual_direcao(casa1, casa2) ==
+	(
+		if casa1.linha = casa2.linha then return <horizontal>
+		elseif casa1.coluna = casa2.coluna then return <vertical>
+		elseif casa1.linha - casa2.linha = num_col(casa1.coluna) - num_col(casa2.coluna) then return <diagonal1>
+		elseif casa1.linha - casa2.linha = -(num_col(casa1.coluna) - num_col(casa2.coluna)) then return <diagonal2>
+		else return <sem_ligacao>
+	);
+	--operação que averigua se existem peças entre duas casas
+	private existe_pecas: Casa * Casa ==> bool
+	existe_pecas(casa1, casa2) ==
+	(
+		if casas_entre(casa1, casa2) inter dom pecasNasCasas = {} then return false
+		else return true
+	);
+	--operação que devolve as casas entre duas peças dadas
+	private casas_entre: Casa * Casa ==> set of Casa
+	casas_entre(casa1, casa2) ==
+	(
+		--se a direcao entre a casa1 e casa2 for vertical verifica se no mapa de casas para peças existe algum mapeamento que ligue uma peça a uma
+		--casa que esteje na mesma coluna entre as casas 1 e 2
+		if qual_direcao(casa1, casa2) = <vertical> then return
+			{mk_Casa(i, casa1.coluna)| i in set{min(casa1.linha, casa2.linha) + 1,..., max(casa1.linha, casa2.linha) - 1}}
+		--se a direcao entre a casa1 e casa2 for horizontal verifica se no mapa de casas para peças existe algum mapeamento que ligue uma peça a uma
+		--casa que esteje na mesma linha entre as casas 1 e 2
+		elseif qual_direcao(casa1, casa2) = <horizontal> then return
+			{mk_Casa(casa1.linha, (inverse num_col)(i))| i in set {min(num_col(casa1.coluna), num_col(casa2.coluna)) + 1,...
+														, max(num_col(casa1.coluna), num_col(casa2.coluna)) - 1}}
+		--se a direcao entre a casa1 e casa2 for diagonal verifica se no mapa de casas para peças existe algum mapeamento que ligue uma peça a uma
+		--casa que esteje na mesma linha diagonal entre as casas 1 e 2
+		elseif qual_direcao(casa1, casa2) = <diagonal1> then return
+			{mk_Casa(maiorCasa(casa1, casa2).linha - i, (inverse num_col)(num_col(maiorCasa(casa1, casa2).coluna) + i)) | 
+					i in set {1 ,..., max(casa1.linha, casa2.linha) - min(casa1.linha, casa2.linha) - 1}}
+		elseif qual_direcao(casa1, casa2) = <diagonal2> then return
+			{mk_Casa(maiorCasa(casa1, casa2).linha - i, (inverse num_col)(num_col(maiorCasa(casa1, casa2).coluna) + i)) | 
+					i in set {1 ,..., max(casa1.linha, casa2.linha) - min(casa1.linha, casa2.linha) - 1}}
+		else return {}
+	);
+	--operação que devolve a casa com a maior linha de entre duas casas que recebe como argumento
+	private maiorCasa: Casa * Casa ==> Casa
+	maiorCasa(casa1, casa2) ==
+	(
+		if casa1.linha > casa2.linha then return casa1
+		else return casa2
+	);
+	--operação para mudar de jogador
+	private muda_jogador: () ==> ()
+	muda_jogador() ==
+	(
+		if not fim_jogo() then
+		(
+			if tabEstado = <vez_jog1> then tabEstado := <vez_jog2>
+			else tabEstado := <vez_jog1>;
+		)
+		else tabEstado := <fim>;
+	);
+	--operação para retornar o mínimo entre dois números naturais
+	private min: nat * nat ==> nat
+	min(n1, n2) ==
+	(
+		if n1 > n2 then return n2
+		else return n1
+	);
+	--operação para retornar o máximo entre dois números naturais
+	private max: nat * nat ==> nat
+	max(n1, n2) ==
+	(
+		if n1 > n2 then return n1
+		else return n2
+	);
+	
+	--operação para retornar a peca que está numa casa específica
+	private getPeca: Casa ==> Peca
+	getPeca(casa) ==
+		return pecasNasCasas(casa)
+	pre casa in set dom pecasNasCasas;
+	
+	--Vamos executar uma sucessão de jogadas para garantir que todas as funções estão a executar correctamente..
+	public teste: () ==> ()
+	teste () == 
+	(
+		--sequencia de quinze jogadas consecutivas em que são comidas 3 pecas e fica uma torre queen na casa D5 com quatro peças
+		jogada(mk_Casa(2, 'a'), mk_Casa(3, 'b'));	--rainha branca de A2 para B3
+		jogada(mk_Casa(7, 'b'), mk_Casa(6, 'c'));	--círculo preto de B7 para C6
+		jogada(mk_Casa(2, 'c'), mk_Casa(3, 'c'));	--quadrado branco de C2 para C3
+		jogada(mk_Casa(6, 'c'), mk_Casa(5, 'b'));	--círculo preto de C6 para B5
+		jogada(mk_Casa(3, 'b'), mk_Casa(4, 'b'));	--rainha branca de B3 para B4
+		jogada(mk_Casa(7, 'f'), mk_Casa(6, 'f'));	--quadrado preto de F7 para F6
+		jogada(mk_Casa(4, 'b'), mk_Casa(5, 'b'));	--rainha branca de B4 para B5 (come círculo preto) - torre de altura 2
+		jogada(mk_Casa(7, 'h'), mk_Casa(6, 'h'));	--rainha preta de H7 para H6
+		jogada(mk_Casa(3, 'c'), mk_Casa(4, 'c'));	--quadrado branco de C3 para C4
+		jogada(mk_Casa(6, 'f'), mk_Casa(6, 'e'));	--quadrado preto de F6 para E6
+		jogada(mk_Casa(4, 'c'), mk_Casa(5, 'c'));	--quadrado branco de C4 para C5
+		jogada(mk_Casa(6, 'e'), mk_Casa(5, 'e'));	--quadrado preto de E6 para E5
+		jogada(mk_Casa(5, 'c'), mk_Casa(5, 'd'));	--quadrado branco de C5 para D5
+		jogada(mk_Casa(5, 'e'), mk_Casa(5, 'd'));	--quadrado preto de E5 para D5 (come quadrado branco) torre de altura 2
+		jogada(mk_Casa(5, 'b'), mk_Casa(5, 'd'));	--rainha branca de B5 para D5 (come torre quadrado preto) torre de altura 4
+	);
+	public teste_FimJogo: () ==> Estado
+	teste_FimJogo() == 
+	(
+		pecasNasCasas := {mk_Casa(1,'a') |-> mk_Peca(<queen>, 1, 6), 
+						mk_Casa(1,'b') |-> mk_Peca(<queen>, 1, 6),
+						mk_Casa(1,'c') |-> mk_Peca(<queen>, 1, 5),
+						mk_Casa(6,'c') |-> mk_Peca(<queen>, 2,5)};
+		jogada(mk_Casa(1,'c'), mk_Casa(6,'c'));
+		return tabEstado;	
+	);
+end Tabuleiro

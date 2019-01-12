@@ -1,0 +1,14 @@
+class Tree1
+types
+public edge:: no1: nat1
+			no2: nat1;
+instance variables
+	public root: nat:=0;
+	public Edges: set of edge :={};
+	
+	--inv1 Uma árvore com n nós tem n-1 arestas (grafo acíclico)
+	--inv2 A raíz da árvore tem de ser um nó da arvore.
+	--inv3 A árvore é conexa.
+	--inv4 A árvore é balanceada (folhas a uma distância d ou d+1 da raíz)
+	--inv5 entre dois nós arbitrários da árvore existe um único caminho.
+end Tree1

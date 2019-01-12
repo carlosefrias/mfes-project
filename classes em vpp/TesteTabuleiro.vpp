@@ -1,0 +1,18 @@
+class TesteTabuleiro 
+	instance variables
+		public tab: Tabuleiro;
+		
+	operations
+		public Teste1: () ==> ()
+		Teste1()==
+		(
+			tab := new Tabuleiro();
+			tab.teste();
+		);
+		public Teste2: () ==> Tabuleiro`Estado
+		Teste2() ==
+		(
+			tab:= new Tabuleiro();
+			return tab.teste_FimJogo();
+		);
+end TesteTabuleiro
